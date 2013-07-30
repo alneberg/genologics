@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 from argparse import ArgumentParser
 from genologics.lims import Lims
-from genologics.entities import Project
+from genologics.entities import Project,Process,Artifact
 from genologics.epp import configure_logging
 import yaml
 import sys
+from collections import defaultdict
 
 example_info={'details': [{'algorithm': {'aligner': 'novoalign',
                                          'quality_format': 'Standard',
@@ -50,17 +51,36 @@ default_info={'details': [{'algorithm': {'aligner': 'novoalign',
               'fc_name': 'unique_name',
               'upload': {'dir': '../final'}}
 
-def main(lims,projectid,outfile):
-    p = Project(lims,id=projectid)
-    try:
-        a = p.udf['Application']
-    except:
-        sys.stderr.write(('Error while collecting Application udf from project '
-                          'with id{0}').format(projectid))
-        raise
-    default_info['details'][1]['analysis'] = a
-    fh = open(outfile,'w+')
-    yaml.dump(default_info,fh,default_flow_style=False)
+def main(lims,processid,outfile):
+    process = Process(lims,id=processid)
+    io = process.input_output_maps
+    io_filtered = filter(lambda (x,y): y['output-generation-type']=='PerInput',io)
+    projects = defaultdict(list)
+    for input,output in io_filtered:
+        i_a = Artifact(lims,id=input['limsid'])
+        for sample in i_a.samples:
+            projects[sample.project].append(sample)
+    
+    print projects.keys()
+    import tarfile
+    outtar = tarfile.open(outfile,'w:gz')
+    for i,p in enumerate(projects):
+        try:
+            a = p.udf['Application']
+        except:
+            sys.stderr.write(('Error while collecting Application udf from project '
+                              'with id{0}').format(projectid))
+            raise
+        fn = p.id+'.yml'
+        print 'Created a yml file named: {0}'.format(fn)
+        tmp = file(fn,'wb')
+        default_info['details'][1]['analysis'] = a
+        yaml.dump(default_info,tmp,default_flow_style=False)
+        tarinfo = tarfile.TarInfo(fn)
+        outtar.add(fn)
+        import os
+        os.remove(fn)
+    outtar.close()
 
 if __name__=="__main__":
     parser = ArgumentParser()
@@ -74,10 +94,9 @@ if __name__=="__main__":
                         help='Process Lims Id')
     parser.add_argument('-l','--log',default=None,
                         help='Log file')
-    parser.add_argument('--projectid',
-                        help='Project id to generate info for')
     parser.add_argument('--outfile',
                         help='Name of outputfile')
+
     args = parser.parse_args()
 
     if args.log:
@@ -86,4 +105,4 @@ if __name__=="__main__":
     lims = Lims(args.baseuri,args.username,args.password)
     lims.check_version()
 
-    main(lims,args.projectid,args.outfile)
+    main(lims,args.pid,args.outfile)
