@@ -32,23 +32,39 @@ default_info={'details': [{'algorithm': {'aligner': 'novoalign',
               'fc_name': 'unique_name',
               'upload': {'dir': '../final'}}
 
+manual_info={'details': [{'algorithm': {'aligner': None
+}
+}
+]
+}
+
 def main(lims,processid,outfile):
+    """ Fetches most of the information from the parent process and its 
+    input artifacts"""
+
     # The current demultiplexing process
     process = Process(lims,id=processid)
     # All unique input artifacts
     input_ids = map(lambda io: io[0]['limsid'],process.input_output_maps)
-    uniq_input_ids = list(frozenset(ids))
+    uniq_input_ids = list(frozenset(input_ids))
     projects = defaultdict(list)
 
     for id in uniq_input_ids:
         i_a = Artifact(lims,id=id)
         for sample in i_a.samples:
             projects[sample.project].append(sample)
-            # fetch the sample sheets
-            cluster_processes = lims.get_processes(type=
-
+            # fetch the multiplexing information
+            cluster_processes = lims.get_processes(
+                type="Cluster Generation (Illumina SBS) 4.0",
+                projectname=sample.project.name)
+            # Fetching multiplex details
+            cluster_input_ids = map(lambda io: io[0]['limsid'],process.input_output_maps)
+            uniq_cluster_input_ids = list(frozenset(cluster_input_ids))
+            for cluster_id in uniq_cluster_input_ids:
+                print cluster_id
 
         # Collecting information for each pool
+        
     outtar = tarfile.open(outfile,'w:gz')
     print projects.keys()
     for i,p in enumerate(projects):
