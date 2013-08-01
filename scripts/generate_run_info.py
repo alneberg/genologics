@@ -32,59 +32,51 @@ default_info={'details': [{'algorithm': {'aligner': 'novoalign',
               'fc_name': 'unique_name',
               'upload': {'dir': '../final'}}
 
-manual_info={'details': [{'algorithm': {'aligner': None
-}
-}
-]
-}
-
 def main(lims,processid,outfile):
     """ Fetches most of the information from the parent process and its 
     input artifacts"""
 
-    # The current demultiplexing process
     process = Process(lims,id=processid)
-    # All unique input artifacts
-    input_ids = map(lambda io: io[0]['limsid'],process.input_output_maps)
-    uniq_input_ids = list(frozenset(input_ids))
+    parent_processes = process.parent_processes()
+    assert len(parent_processes) == 1
+    parent_process = parent_processes[0]
+    input_artifacts = process.all_inputs(unique=True)
+
+    # Store each project as a key with the samples and artifacts as values
     projects = defaultdict(list)
-
-    for id in uniq_input_ids:
-        i_a = Artifact(lims,id=id)
+    for i_a in input_artifacts:
+        # Input artifacts are pools, sometimes containing multiple samples.
         for sample in i_a.samples:
-            projects[sample.project].append(sample)
-            # fetch the multiplexing information
-            cluster_processes = lims.get_processes(
-                type="Cluster Generation (Illumina SBS) 4.0",
-                projectname=sample.project.name)
-            # Fetching multiplex details
-            cluster_input_ids = map(lambda io: io[0]['limsid'],process.input_output_maps)
-            uniq_cluster_input_ids = list(frozenset(cluster_input_ids))
-            for cluster_id in uniq_cluster_input_ids:
-                print cluster_id
+            projects[sample.project].append((sample,i_a))
 
-        # Collecting information for each pool
-        
-    outtar = tarfile.open(outfile,'w:gz')
-    print projects.keys()
-    for i,p in enumerate(projects):
+    # Create a separate file for each project present in the artifacts
+    files=[]
+    for project in projects.keys():
+        tmp_info = copy.deepcopy(default_info)
+
         print 'Collecting application udf from project with id {0}'.format(p.id)
-        a = p.udf['Application']
-        # Should have error handling here to catch projects without application stated
-        
         fn = p.id+'.yml'
-        print 'Creating a yaml file named: {0}'.format(fn)
         tmp = file(fn,'wb')
 
-        tmp_info = copy.deepcopy(default_info)
+        # fetch the multiplexing information, the main sources of information 
+        # should be:
+        # parent_process.udf.items() and
+        # project.udf.items()
+
+        # *Should have error handling here to catch projects without application stated*
+        a = p.udf['Application']
         tmp_info['details'][1]['analysis'] = a
         yaml.dump(default_info,tmp,default_flow_style=False)
-
+        tmp.close()
+        files.append(fn)
+        
+    # Save all files into a tarball
+    outtar = tarfile.open(outfile,'w:gz')
+    for fn in files:
         # Put file in tar archive and delete the temporary one
         tarinfo = tarfile.TarInfo(fn)
         outtar.add(fn)
         os.remove(fn)
-
     outtar.close()
 
 if __name__=="__main__":
