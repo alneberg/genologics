@@ -33,18 +33,25 @@ class EppLogger(object):
         pass
 
     def __exit__(self,exc_type,exc_val,exc_tb):
-        self.htmlify()
+        if self.html:
+            log = self.htmlify(exc_type)
+        else:
+            log = open(self.tmp_log_file,'r').read()
+        # append new log to log file
+        open(self.log_file,'a').write(log)
 
-    def __init__(self, log_file,level=logging.INFO):
+    def __init__(self, log_file,level=logging.INFO,html=True):
         self.log_file = log_file
-        # check if file is empty:
-        self.fresh = (not os.path.isfile(log_file)) or os.stat(log_file).st_size == 0
+        self.tmp_log_file = 'tmp_' + log_file
         self.level = level
+        self.html = html
+
+        # Basic Configurations
         logging.basicConfig(
-            level=logging.DEBUG,
+            level=self.level,
             format='%(asctime)s:%(levelname)s:%(name)s:%(message)s',
-            filename=log_file,
-            filemode='a'
+            filename=self.tmp_log_file,
+            filemode='w'
             )
 
         # This part was copied together with the StreamToLogger class below
@@ -58,7 +65,7 @@ class EppLogger(object):
 
     def htmlify(self):
         """Turn log file into html with colour coding"""
-        pre_style = """pre {
+        head_pre_style = """pre {
                       white-space: pre-wrap; /* css-3 */
                       white-space: -moz-pre-wrap !important; /* Mozilla, since 1999 */
                       white-space: -pre-wrap; /* Opera 4-6 */
@@ -68,19 +75,22 @@ class EppLogger(object):
                       background-color: #f0f8ff;
                       padding: 5px;
                    }"""
-        colors= {'green':'#28DD31'}
+        colors= {'green':'#28DD31', 'red':'#F62217'}
+        log = open(self.tmp_log_file,'r').read()
+        if log.find('traceback')>=0:
+            color = colors['red']
+        else:
+            color = colors['green']
+        pre_style = "background-color: {0}".format(color)
 
-        log = open(self.log_file,'r').read()
-        if self.fresh:
-            doc = HTML()
-            h = doc.html
-            he = h.head
-            he.title("EPP script Log")
-            he.style(pre_style,type="text/css")
-            b = h.body
-            b.pre(log)
-            with open(self.log_file,'w') as f:
-                f.write(str(h))
+        doc = HTML()
+        h = doc.html
+        he = h.head
+        he.title("EPP script Log")
+        he.style(head_pre_style,type="text/css")
+        b = h.body
+        b.pre(log,style=pre_style)
+        return str(h)
 
 
     class StreamToLogger(object):
