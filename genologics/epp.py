@@ -34,11 +34,15 @@ class EppLogger(object):
 
     def __exit__(self,exc_type,exc_val,exc_tb):
         if self.html:
-            log = self.htmlify(exc_type)
+            log = self.htmlify(exc_tb)
+        elif exc_tb:
+            pass
         else:
             log = open(self.tmp_log_file,'r').read()
+
         # append new log to log file
         open(self.log_file,'a').write(log)
+        return False
 
     def __init__(self, log_file,level=logging.INFO,html=True):
         self.log_file = log_file
@@ -56,14 +60,14 @@ class EppLogger(object):
 
         # This part was copied together with the StreamToLogger class below
         stdout_logger = logging.getLogger('STDOUT')
-        sl = self.StreamToLogger(stdout_logger, logging.INFO)
-        sys.stdout = sl
+        self.out_logger = self.StreamToLogger(stdout_logger, logging.INFO)
+        sys.stdout = self.out_logger
 
         stderr_logger = logging.getLogger('STDERR')
-        sl = self.StreamToLogger(stderr_logger, logging.ERROR)
-        sys.stderr = sl
+        self.error_logger = self.StreamToLogger(stderr_logger, logging.ERROR)
+        sys.stderr = self.error_logger
 
-    def htmlify(self):
+    def htmlify(self,exec_tb):
         """Turn log file into html with colour coding"""
         head_pre_style = """pre {
                       white-space: pre-wrap; /* css-3 */
@@ -77,12 +81,12 @@ class EppLogger(object):
                    }"""
         colors= {'green':'#28DD31', 'red':'#F62217'}
         log = open(self.tmp_log_file,'r').read()
-        if log.find('traceback')>=0:
+        if len(log)>0 and exec_tb:
             color = colors['red']
         else:
             color = colors['green']
         pre_style = "background-color: {0}".format(color)
-
+        print dir(exec_tb)
         doc = HTML()
         h = doc.html
         he = h.head
