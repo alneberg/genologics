@@ -5,7 +5,30 @@ from genologics.config import BASEURI,USERNAME,PASSWORD
 from collections import Counter
 from argparse import ArgumentParser
 
-def main(lims,d,open_date=None):
+def per_project_summary(lims,open_date=None):
+    all_projects = lims.get_projects(open_date=open_date)
+    for project in all_projects:
+        print project.name
+        try:
+            application = project.udf['Application']
+        except:
+            application =  '***No application found***'
+        print "Application: " + application
+
+        try:
+            best_practice = project.udf['Best practice bioinformatics']
+        except:
+            best_practoce = '***No best practice found***'
+        print "Best practice: " + best_practice
+
+        try:
+            bioinfo_qc = project.udf['Bioinformatics QC']
+        except:
+            bioinfo_qc = '***No Bioinformatics QC found***'
+        print "Bioinformatics QC: " + bioinfo_qc
+        print ""
+
+def per_category_summary(lims,d,open_date=None):
     all_projects = lims.get_projects(open_date=open_date)
     applications = []
     best_practice = []
@@ -44,12 +67,22 @@ def main(lims,d,open_date=None):
     print "Approved applications: {0}".format(approved_counter)
 
     
+def main(lims,args,d,open_date=None):
+    if args.per_category:
+        per_category_summary(lims,d,open_date=open_date)
+    if args.per_project:
+        per_project_summary(lims,open_date=open_date)
 
 if __name__ =="__main__":
 
     parser = ArgumentParser()
     parser.add_argument('--open_date',
                         help='Only use projects opened after this date')
+    parser.add_argument('--per_category', action='store_true',
+                        help='Give per category summary')
+    parser.add_argument('--per_project', action='store_true',
+                        help='Give per project summary')
+
     args = parser.parse_args()
 
 
@@ -62,4 +95,5 @@ if __name__ =="__main__":
                          'RNA-seq (Ribominus)','RNA-seq (total RNA)',
                          'RNA-seq (RiboZero)', 'cDNA','Special','WG re-seq',
                          'QA']
-    main(lims,application_default,open_date=args.open_date)
+
+    main(lims,args,application_default,open_date=args.open_date)
