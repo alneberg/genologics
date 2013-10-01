@@ -29,18 +29,21 @@ def apply_calculations(lims,artifacts,amount_udf,taken_udf,epp_logger):
         artifact.put()
         logging.info('Updated {0} to {1}.'.format(amount_udf,
                                                  artifact.udf[amount_udf]))
+
 def check_udf_is_defined(inputs,udf):
     """ Exit if udf is not defined for any of inputs. """
-    filtered_inputs = []
-    incorrect_inputs = []
-    for input in inputs:
-        if not (udf in input.udf):
-            msg = ("Found artifact for sample {0} with {1} "
-                   "undefined/blank, exiting").format(input.samples[0].name,udf)
-            print >> sys.stderr, msg
-            sys.exit(-1)
+    filtered_artifacts = []
+    incorrect_artifacts = []
+    for articat in artifacts:
+        if (udf in artifact.udf):
+            filtered_artifacts.append(artifact)
+        else:
+            logging.warning(("Found artifact for sample {0} with {1} "
+                             "undefined/blank, exiting").format(input.samples[0].name,udf))
+            incorrect_artifacts.append(artifact)
+    return filtered_artifacts, incorrect_artifacts
 
-            def main(lims,args,epp_logger):
+def main(lims,args,epp_logger):
     p = Process(lims,id = args.pid)
     udf_check = 'Conc. Units'
     value_check = 'ng/ul'
