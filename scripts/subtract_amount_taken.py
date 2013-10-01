@@ -45,23 +45,23 @@ def check_udf_is_defined(inputs,udf):
 
 def main(lims,args,epp_logger):
     p = Process(lims,id = args.pid)
-    udf_check = 'Conc. Units'
-    value_check = 'ng/ul'
-    concentration_udf = 'Concentration'
-    size_udf = 'Size (bp)'
+    amount_udf = 'Amount (ng)'
+    taken_udf = 'Amount taken (ng)'
+
     if args.aggregate:
         artifacts = p.all_inputs(unique=True)
     else:
         all_artifacts = p.all_outputs(unique=True)
         artifacts = filter(lambda a: a.output_type == "File" ,all_artifacts)
 
-    check_udf_is_defined(artifacts,concentration_udf)
-    check_udf_is_defined(artifacts,size_udf)
-    correct_artifacts, incorrect_artifacts = check_udf(artifacts,udf_check,value_check)
+    correct_amount_a, incorrect_amount_a = check_udf(artifacts,amount_check)
+    correct_artifacts, incorrect_taken_a = check_udf(correct_amount_a, taken_udf)
+
+    incorrect_artifacts = incorrect_amount_a + incorrect_taken_a
+
     apply_calculations(lims,correct_artifacts,concentration_udf,size_udf,udf_check,epp_logger)
 
-    abstract = ("Updated {0} artifact(s), skipped {1} artifact(s) with "
-                "wrong 'Conc. Unit'.").format(len(correct_artifacts),
+    abstract = ("Updated {0} artifact(s), skipped {1} artifact(s) with incorrect udf info.").format(len(correct_artifacts),
                                              len(incorrect_artifacts))
     print >> sys.stderr, abstract # stderr will be logged and printed in GUI
 
