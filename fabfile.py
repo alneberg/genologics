@@ -7,9 +7,10 @@ from fabric.context_managers import lcd
 from git import Repo
 from contextlib import contextmanager
 import ConfigParser
+import os
 
 CONFIG = ConfigParser.SafeConfigParser()
-conf_file = '.fabfilerc'
+conf_file = os.path.expanduser('~/.fabfilerc')
 CONFIG.readfp(open(conf_file))
 
 def get_setting(v):
