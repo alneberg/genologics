@@ -60,7 +60,8 @@ def commit_all(ignore_version=False, msg=None, run_method=local):
     if ignore_version:
         run_method("git checkout {0}".format("version.py"))
 
-    run_method('git commit -am "{0}"'.format(msg))
+    if get_repo().is_dirty():
+        run_method('git commit -am "{0}"'.format(msg))
         
 
 def get_repo(path=LOCAL_REPO_PATH):
@@ -83,11 +84,10 @@ def prepare_for_stage(branch):
 
         # Needed for proper doc generation on readthedocs
         generate_docs(run_method=local)
-        if get_repo().is_dirty():
-            commit_all(ignore_version=True, 
-                       msg=("Auto: Regenerated doc templates after merging {0} "
-                            "to test_scripts").format(branch),
-                       run_method=local)
+        commit_all(ignore_version=True, 
+                   msg=("Auto: Regenerated doc templates after merging {0} "
+                        "to test_scripts").format(branch),
+                   run_method=local)
         push(USER_GR, 'test_scripts', run_method=local)
 
 @hosts(STAGE)
