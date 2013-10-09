@@ -1,13 +1,10 @@
 #!/usr/bin/env python
-"""EPP script to subtract amount taken from amount in Clarity LIMS
-Command to trigger this script:
-bash -c "PATH/TO/INSTALLED/SCRIPT
---pid {processLuid} 
---log {compoundOutputFileLuidN}"
-"
+DESC = """EPP script to subtract the value of "Amount taken (ng)" udf from "Amount (ng)"
+ udf in Clarity LIMS. Can be executed in the background, without user pressing a "blue button".
 
-Johannes Alneberg, Science for Life Laboratory, Stockholm, Sweden
+Written by Johannes Alneberg, Science for Life Laboratory, Stockholm, Sweden
 """ 
+
 from argparse import ArgumentParser
 
 from genologics.lims import Lims
@@ -57,9 +54,10 @@ def main(lims,args,epp_logger):
     correct_amount_a, incorrect_amount_a = check_udf(artifacts,amount_check)
     correct_artifacts, incorrect_taken_a = check_udf(correct_amount_a, taken_udf)
 
+    # Merge lists of mutually exclusive incorrect artifcats
     incorrect_artifacts = incorrect_amount_a + incorrect_taken_a
 
-    apply_calculations(lims,correct_artifacts,concentration_udf,size_udf,udf_check,epp_logger)
+    apply_calculations(lims,correct_artifacts, amount_udf, taken_udf, epp_logger)
 
     abstract = ("Updated {0} artifact(s), skipped {1} artifact(s) with incorrect udf info.").format(len(correct_artifacts),
                                              len(incorrect_artifacts))
@@ -68,22 +66,19 @@ def main(lims,args,epp_logger):
 
 if __name__ == "__main__":
     # Initialize parser with standard arguments and description
-    desc = """EPP script to calculate molar concentration from concentration the
- udf in Clarity LIMS. """
 
-    parser = ArgumentParser(description=desc)
+    parser = ArgumentParser(description=DESC)
     parser.add_argument('--pid',
                         help='Lims id for current Process')
     parser.add_argument('--log',default=sys.stdout,
                         help='Log file')
-    parser.add_argument('--no_prepend',action='store_true',
-                        help="Do not prepend old log file")
     parser.add_argument('--aggregate', action='store_true',
-                        help='Current Process is an aggregate QC step')
+                        help=('This flag is needed if the current process '
+                              'is an aggregate QC step'))
     args = parser.parse_args()
 
     lims = Lims(BASEURI,USERNAME,PASSWORD)
     lims.check_version()
-    prepend = not args.no_prepend
-    with EppLogger(args.log,lims=lims,prepend=prepend) as epp_logger:
-        main(lims, args,epp_logger)
+
+    with EppLogger(args.log,lims=lims, prepend=True) as epp_logger:
+        main(lims, args, epp_logger)
