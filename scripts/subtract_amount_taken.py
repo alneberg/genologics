@@ -54,7 +54,7 @@ def main(lims,args,epp_logger):
         all_artifacts = p.all_outputs(unique=True)
         artifacts = filter(lambda a: a.output_type == "File" ,all_artifacts)
 
-    correct_amount_a, incorrect_amount_a = check_udf_is_defined(artifacts,amount_check)
+    correct_amount_a, incorrect_amount_a = check_udf_is_defined(artifacts,amount_udf)
     correct_artifacts, incorrect_taken_a = check_udf_is_defined(correct_amount_a, taken_udf)
 
     # Merge lists of mutually exclusive incorrect artifcats
