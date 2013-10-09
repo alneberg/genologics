@@ -2,6 +2,9 @@
 DESC = """EPP script to subtract the value of "Amount taken (ng)" udf from "Amount (ng)"
  udf in Clarity LIMS. Can be executed in the background, without user pressing a "blue button".
 
+What happens if the process step is aborted? Is the amount taken put back into the amount?
+What safety checks should we have for the amount taken value... Less than what's in the amount udf?
+
 Written by Johannes Alneberg, Science for Life Laboratory, Stockholm, Sweden
 """ 
 
@@ -51,8 +54,8 @@ def main(lims,args,epp_logger):
         all_artifacts = p.all_outputs(unique=True)
         artifacts = filter(lambda a: a.output_type == "File" ,all_artifacts)
 
-    correct_amount_a, incorrect_amount_a = check_udf(artifacts,amount_check)
-    correct_artifacts, incorrect_taken_a = check_udf(correct_amount_a, taken_udf)
+    correct_amount_a, incorrect_amount_a = check_udf_is_defined(artifacts,amount_check)
+    correct_artifacts, incorrect_taken_a = check_udf_is_defined(correct_amount_a, taken_udf)
 
     # Merge lists of mutually exclusive incorrect artifcats
     incorrect_artifacts = incorrect_amount_a + incorrect_taken_a
