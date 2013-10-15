@@ -30,11 +30,11 @@ def apply_calculations(lims,artifacts,amount_udf,taken_udf,epp_logger):
         logging.info('Updated {0} to {1}.'.format(amount_udf,
                                                  artifact.udf[amount_udf]))
 
-def check_udf_is_defined(inputs,udf):
+def check_udf_is_defined(artifacts,udf):
     """ Exit if udf is not defined for any of inputs. """
     filtered_artifacts = []
     incorrect_artifacts = []
-    for articat in artifacts:
+    for artifact in artifacts:
         if (udf in artifact.udf):
             filtered_artifacts.append(artifact)
         else:
@@ -54,7 +54,7 @@ def main(lims,args,epp_logger):
         all_artifacts = p.all_outputs(unique=True)
         artifacts = filter(lambda a: a.output_type == "File" ,all_artifacts)
 
-    correct_amount_a, incorrect_amount_a = check_udf_is_defined(artifacts,amount_udf)
+    correct_amount_a, incorrect_amount_a = check_udf_is_defined(artifacts, amount_udf)
     correct_artifacts, incorrect_taken_a = check_udf_is_defined(correct_amount_a, taken_udf)
 
     # Merge lists of mutually exclusive incorrect artifcats
