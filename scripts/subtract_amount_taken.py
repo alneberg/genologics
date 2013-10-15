@@ -39,7 +39,7 @@ def check_udf_is_defined(artifacts,udf):
             filtered_artifacts.append(artifact)
         else:
             logging.warning(("Found artifact for sample {0} with {1} "
-                             "undefined/blank, exiting").format(input.samples[0].name,udf))
+                             "undefined/blank.").format(input.samples[0].name,udf))
             incorrect_artifacts.append(artifact)
     return filtered_artifacts, incorrect_artifacts
 
@@ -52,7 +52,7 @@ def main(lims,args,epp_logger):
         artifacts = p.all_inputs(unique=True)
     else:
         all_artifacts = p.all_outputs(unique=True)
-        artifacts = filter(lambda a: a.output_type == "File" ,all_artifacts)
+        artifacts = filter(lambda a: a.output_type == "Analyte", all_artifacts)
 
     correct_amount_a, incorrect_amount_a = check_udf_is_defined(artifacts, amount_udf)
     correct_artifacts, incorrect_taken_a = check_udf_is_defined(correct_amount_a, taken_udf)
