@@ -39,7 +39,7 @@ def check_udf_is_defined(artifacts,udf):
             filtered_artifacts.append(artifact)
         else:
             logging.warning(("Found artifact for sample {0} with {1} "
-                             "undefined/blank.").format(input.samples[0].name,udf))
+                             "undefined/blank.").format(artifact.samples[0].name,udf))
             incorrect_artifacts.append(artifact)
     return filtered_artifacts, incorrect_artifacts
 
