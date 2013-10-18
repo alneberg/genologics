@@ -3,39 +3,33 @@ Scripts in the Genologics Package
 =================================
 Short usage descriptions for the scripts in the Genologics Package.
 
-molar_concentration.py
-----------------------
-Automated help message generated from running molar_concentration.py with the --help flag::
-
-	usage: molar_concentration.py [-h] [--pid PID] [--log LOG] [--no_prepend]
-	                              [--aggregate]
-	
-	EPP script to calculate molar concentration from concentration the udf in
-	Clarity LIMS.
-	
-	optional arguments:
-	  -h, --help    show this help message and exit
-	  --pid PID     Lims id for current Process
-	  --log LOG     Log file
-	  --no_prepend  Do not prepend old log file
-	  --aggregate   Current Process is an aggregate QC step
-
-qc_amount_calculation.py
+copy_status_to_sample.py
 ------------------------
-Automated help message generated from running qc_amount_calculation.py with the --help flag::
+Automated help message generated from running copy_status_to_sample.py with the --help flag::
 
-	usage: qc_amount_calculation.py [-h] [--pid PID] [--log LOG] [--no_prepend]
-	                                [--aggregate]
+	usage: copy_status_to_sample.py [-h] [--pid PID] [--log LOG]
+	                                [--status_changelog STATUS_CHANGELOG]
 	
-	EPP script to calculate amount in ng from concentration and volume udf:s in
-	Clarity LIMS.
+	EPP script to copy user defined field 'Status (manual)' from analyte level to
+	submitted sample level in Clarity LIMS. Can be executed in the background or
+	triggered by a user pressing a "blue button". This script can only be applied
+	to processes where ANALYTES are modified in the GUI. The script can output two
+	different logs, where the status_changelog contains notes with the technician,
+	the date and changed status for each copied status. The regular log file
+	contains regular execution information. Error handling: If the udf 'Status
+	(manual)' is blank or not defined for any of the inputs, the script will log
+	this, and not perform any changes for that artifact. Written by Johannes
+	Alneberg, Science for Life Laboratory, Stockholm, Sweden
 	
 	optional arguments:
-	  -h, --help    show this help message and exit
-	  --pid PID     Lims id for current Process
-	  --log LOG     Log file
-	  --no_prepend  Do not prepend old log file
-	  --aggregate   Current Process is an aggregate QC step
+	  -h, --help            show this help message and exit
+	  --pid PID             Lims id for current Process
+	  --log LOG             File name for standard log file, for runtime
+	                        information and problems.
+	  --status_changelog STATUS_CHANGELOG
+	                        File name for status changelog file, for concise
+	                        information on who, what and when for status change
+	                        events. Prepends the old changelog file by default.
 
 zebra_barcodes.py
 -----------------
