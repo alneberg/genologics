@@ -60,14 +60,18 @@ Automated help message generated from running qc_amount_calculation.py with the 
 	                                [--aggregate]
 	
 	EPP script to calculate amount in ng from concentration and volume udf:s in
-	Clarity LIMS.
+	Clarity LIMS. The script checks that the 'Volume (ul)' and 'Concentration'
+	udf:s are defined for all artifacts that are to be updated, otherwise the
+	script exits with an error message. The udf. 'Conc. Units' has to have the
+	value: 'ng/ul', otherwise that artifact is skipped by the script. Johannes
+	Alneberg, Science for Life Laboratory, Stockholm, Sweden
 	
 	optional arguments:
 	  -h, --help    show this help message and exit
 	  --pid PID     Lims id for current Process
-	  --log LOG     Log file
+	  --log LOG     Log file for runtime info and errors.
 	  --no_prepend  Do not prepend old log file
-	  --aggregate   Current Process is an aggregate QC step
+	  --aggregate   Use this tag if current Process is an aggregate QC step
 
 zebra_barcodes.py
 -----------------
