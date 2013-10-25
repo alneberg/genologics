@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-"""EPP script to perform basic calculations on UDF:s in Clarity LIMS
-Command to trigger this script:
-bash -c "PATH/TO/INSTALLED/SCRIPT
---pid {processLuid} 
---log {compoundOutputFileLuidN}"
-"
+DESC="""EPP script to calculate amount in ng from concentration and volume 
+udf:s in Clarity LIMS. The script checks that the 'Volume (ul)' and 
+'Concentration' udf:s are defined for all artifacts that are to be updated,
+ otherwise the script exits with an error message. The udf. 'Conc. Units' 
+has to have the value: 'ng/ul', otherwise that artifact is skipped by the 
+script.
 
 Johannes Alneberg, Science for Life Laboratory, Stockholm, Sweden
 """ 
@@ -92,18 +92,16 @@ def main(lims,args,epp_logger):
 
 if __name__ == "__main__":
     # Initialize parser with standard arguments and description
-    desc = """EPP script to calculate amount in ng from concentration 
-and volume udf:s in Clarity LIMS. """
-
-    parser = ArgumentParser(description=desc)
+    parser = ArgumentParser(description=DESC)
     parser.add_argument('--pid',
                         help='Lims id for current Process')
     parser.add_argument('--log',default=sys.stdout,
-                        help='Log file')
+                        help='Log file for runtime info and errors.')
     parser.add_argument('--no_prepend',action='store_true',
                         help="Do not prepend old log file")
     parser.add_argument('--aggregate', action='store_true',
-                        help='Current Process is an aggregate QC step')
+                        help=('Use this tag if current Process is an '
+                              'aggregate QC step'))
     args = parser.parse_args()
 
     lims = Lims(BASEURI,USERNAME,PASSWORD)
