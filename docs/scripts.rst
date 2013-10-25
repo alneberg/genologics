@@ -52,6 +52,23 @@ Automated help message generated from running copy_status_to_sample.py with the 
 	                        information on who, what and when for status change
 	                        events. Prepends the old changelog file by default.
 
+qc_amount_calculation.py
+------------------------
+Automated help message generated from running qc_amount_calculation.py with the --help flag::
+
+	usage: qc_amount_calculation.py [-h] [--pid PID] [--log LOG] [--no_prepend]
+	                                [--aggregate]
+	
+	EPP script to calculate amount in ng from concentration and volume udf:s in
+	Clarity LIMS.
+	
+	optional arguments:
+	  -h, --help    show this help message and exit
+	  --pid PID     Lims id for current Process
+	  --log LOG     Log file
+	  --no_prepend  Do not prepend old log file
+	  --aggregate   Current Process is an aggregate QC step
+
 zebra_barcodes.py
 -----------------
 Automated help message generated from running zebra_barcodes.py with the --help flag::
