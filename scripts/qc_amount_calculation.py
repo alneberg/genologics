@@ -39,6 +39,15 @@ def apply_calculations(lims,artifacts,udf1,op,udf2,result_udf,epp_logger):
         artifact.put()
         logging.info('Updated {0} to {1}.'.format(result_udf,
                                                  artifact.udf[result_udf]))
+def check_udf_is_defined(inputs,udf):
+    """ Exit if udf is not defined for any of inputs. """
+    for input in inputs:
+        if not (udf in input.udf):
+            msg = ("Found artifact for sample {0} with {1} "
+                   "undefined/blank, exiting").format(input.samples[0].name,udf)
+            print >> sys.stderr, msg
+            sys.exit(-1)
+
 def check_udf(artifacts,udf,value):
     """ Filter artifacts on undefined udf or if udf has wrong value. """
     filtered_artifacts = []
@@ -66,6 +75,9 @@ def main(lims,args,epp_logger):
     else:
         all_artifacts = p.all_outputs(unique=True)
         artifacts = filter(lambda a: a.output_type == "ResultFile" ,all_artifacts)
+
+    check_udf_is_defined(artifacts, 'Concentration')
+    check_udf_is_defined(artifacts, 'Volume (ul)')
 
     correct_artifacts, incorrect_artifacts = check_udf(artifacts,udf_check,value_check)
 
