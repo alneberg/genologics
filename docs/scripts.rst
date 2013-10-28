@@ -52,6 +52,7 @@ Automated help message generated from running copy_status_to_sample.py with the 
 	                        information on who, what and when for status change
 	                        events. Prepends the old changelog file by default.
 
+
 qc_amount_calculation.py
 ------------------------
 Automated help message generated from running qc_amount_calculation.py with the --help flag::
@@ -72,6 +73,7 @@ Automated help message generated from running qc_amount_calculation.py with the 
 	  --log LOG     Log file for runtime info and errors.
 	  --no_prepend  Do not prepend old log file
 	  --aggregate   Use this tag if current Process is an aggregate QC step
+
 
 zebra_barcodes.py
 -----------------
