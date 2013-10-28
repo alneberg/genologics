@@ -95,7 +95,7 @@ if __name__ == "__main__":
     parser = ArgumentParser(description=DESC)
     parser.add_argument('--pid',
                         help='Lims id for current Process')
-    parser.add_argument('--log',default=sys.stdout,
+    parser.add_argument('--log',
                         help='Log file for runtime info and errors.')
     parser.add_argument('--no_prepend',action='store_true',
                         help="Do not prepend old log file")
