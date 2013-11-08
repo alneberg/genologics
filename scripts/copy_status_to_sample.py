@@ -49,7 +49,7 @@ class Session(object):
         s = self._sample(artifact)
 
         if self.d_udf in s.udf:
-            return s.udf[self.udf]
+            return s.udf[self.d_udf]
         else:
             return "Undefined"
 
@@ -65,7 +65,7 @@ class Session(object):
                  'sn' : self._sample(artifact).name,
                  'si' : self._sample(artifact).id,
                  'su' : self._sample_udf(artifact),
-                 'nv' : artifact.udf[self.udf]
+                 'nv' : artifact.udf[self.s_udf]
                  }
 
             changelog_f.write(("{ct}: Technician {tn} (id: {ti}), "
@@ -79,7 +79,7 @@ class Session(object):
         d = {'s_udf': self.s_udf,
              'd_udf': self.d_udf,
              'su': saved_sample_udf,
-             'nv': artifact.udf[self.udf]
+             'nv': artifact.udf[self.s_udf]
              }
 
         logging.info("Updated Sample {d_udf} from {su} to {nv}.".format(**d))
@@ -87,7 +87,7 @@ class Session(object):
     def copy_udf(self,artifact, changelog_f = None):
         saved_sample_udf = self._sample_udf(artifact)
 
-        if artifact.udf[self.udf] != saved_sample_udf:
+        if artifact.udf[self.s_udf] != saved_sample_udf:
             self.log_before_change(artifact, changelog_f)
 
             sample = self._sample(artifact)
@@ -146,7 +146,12 @@ def main(lims,args,epp_logger):
     p = Process(lims,id = args.pid)
     source_update_udf = 'Set Status (manual)'
     dest_update_udf = 'Status (manual)'
-    artifacts = p.all_inputs(unique=True)
+    if args.aggregate:
+        artifacts = p.all_inputs(unique=True)
+    else:
+        artifacts = p.all_outputs(unique=True)
+        artifacts = filter(lambda a: a.type == 'Analyte', artifacts)
+
     correct_artifacts, incorrect_udf = check_udf_is_defined(artifacts, source_update_udf)
 
     if args.status_changelog:
@@ -186,6 +191,12 @@ if __name__ == "__main__":
                               ' for concise information on who, what and '
                               ' when for status change events. '
                               'Prepends the old changelog file by default.'))
+    parser.add_argument('--aggregate', default=False, action="store_true",
+                        help=("Use this tag if your process is aggregating"
+                              "results. The default behaviour assumes it is"
+                              "the output artifact of type analyte that is"
+                              "modified while this tag changes this to using"
+                              "input artifacts instead"))
     args = parser.parse_args()
 
     lims = Lims(BASEURI,USERNAME,PASSWORD)
