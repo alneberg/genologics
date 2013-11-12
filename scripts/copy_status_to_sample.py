@@ -68,8 +68,7 @@ class Session(object):
                  'nv' : artifact.udf[self.s_udf]
                  }
 
-            changelog_f.write(("{ct}: Technician {tn} (id: {ti}), "
-                               "udf: {s_udf} on {sn} (id: {si}) from "
+            changelog_f.write(("{ct}: udf: {s_udf} on {sn} (id: {si}) from "
                                "{su} to {nv}.\n").format(**d))
 
         logging.info(("Copying from artifact with id: {0} to sample with "
