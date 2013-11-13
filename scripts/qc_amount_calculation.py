@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 DESC="""EPP script to calculate amount in ng from concentration and volume 
 udf:s in Clarity LIMS. The script checks that the 'Volume (ul)' and 
-'Concentration' udf:s are defined for all artifacts that are to be updated,
- otherwise the script exits with an error message. The udf. 'Conc. Units' 
-has to have the value: 'ng/ul', otherwise that artifact is skipped by the 
-script.
+'Concentration' udf:s are defined and that the udf. 'Conc. Units' 
+ have the correct value: 'ng/ul', otherwise that artifact is skipped, 
+left unchanged, by the script.
 
 Johannes Alneberg, Science for Life Laboratory, Stockholm, Sweden
 """ 
@@ -21,7 +20,7 @@ import sys
 
 def apply_calculations(lims,artifacts,udf1,op,udf2,result_udf,epp_logger):
     logging.info(("result_udf: {0}, udf1: {1}, "
-           "operator: {2}, udf2: {3}").format(result_udf,udf1,op,udf2))
+                  "operator: {2}, udf2: {3}").format(result_udf,udf1,op,udf2))
     for artifact in artifacts:
         try:
             artifact.udf[result_udf]
@@ -39,16 +38,22 @@ def apply_calculations(lims,artifacts,udf1,op,udf2,result_udf,epp_logger):
         artifact.put()
         logging.info('Updated {0} to {1}.'.format(result_udf,
                                                  artifact.udf[result_udf]))
-def check_udf_is_defined(inputs,udf):
-    """ Exit if udf is not defined for any of inputs. """
-    for input in inputs:
-        if not (udf in input.udf):
-            msg = ("Found artifact for sample {0} with {1} "
-                   "undefined/blank, exiting").format(input.samples[0].name,udf)
-            print >> sys.stderr, msg
-            sys.exit(-1)
+            
+def check_udf_is_defined(artifacts, udf):
+    """ Filter and Warn if udf is not defined for any of artifacts. """
+    filtered_artifacts = []
+    incorrect_artifacts = []
+    for artifact in artifacts:
+        if (udf in artifact.udf):
+            filtered_artifacts.append(artifact)
+        else:
+            logging.warning(("Found artifact for sample {0} with {1} "
+                             "undefined/blank, skipping").format(artifact.samples[0].name, udf))
+            incorrect_artifacts.append(artifact)
+    return filtered_artifacts, incorrect_artifacts
 
-def check_udf(artifacts,udf,value):
+
+def check_udf_has_value(artifacts, udf, value):
     """ Filter artifacts on undefined udf or if udf has wrong value. """
     filtered_artifacts = []
     incorrect_artifacts = []
@@ -57,36 +62,44 @@ def check_udf(artifacts,udf,value):
             filtered_artifacts.append(artifact)
         elif udf in artifact.udf:
             incorrect_artifacts.append(artifact)
-            logging.info(("Filtered out artifact for sample: {0}"
-                          ", due to wrong {1}").format(artifact.samples[0].name,udf))
+            logging.warning(("Filtered out artifact for sample: {0}"
+                          ", due to wrong {1}").format(artifact.samples[0].name, udf))
         else:
             incorrect_artifacts.append(artifact)
-            logging.info(("Filtered out artifact for sample: {0}"
-                          ", due to undefined/blank {1}").format(artifact.samples[0].name,udf))
+            logging.warning(("Filtered out artifact for sample: {0}"
+                          ", due to undefined/blank {1}").format(artifact.samples[0].name, udf))
 
-    return filtered_artifacts,incorrect_artifacts
+    return filtered_artifacts, incorrect_artifacts
 
 def main(lims,args,epp_logger):
     p = Process(lims,id = args.pid)
     udf_check = 'Conc. Units'
     value_check = 'ng/ul'
+    udf_factor1 = 'Concentration'
+    udf_factor2 = 'Volume (ul)'
+    result_udf = 'Amount (ng)'
+
     if args.aggregate:
         artifacts = p.all_inputs(unique=True)
     else:
         all_artifacts = p.all_outputs(unique=True)
         artifacts = filter(lambda a: a.output_type == "ResultFile" ,all_artifacts)
 
-    check_udf_is_defined(artifacts, 'Concentration')
-    check_udf_is_defined(artifacts, 'Volume (ul)')
+    correct_artifacts, wrong_factor1 = check_udf_is_defined(artifacts, udf_factor1)
+    correct_artifacts, wrong_factor2 = check_udf_is_defined(correct_artifacts, udf_factor2)
 
-    correct_artifacts, incorrect_artifacts = check_udf(artifacts,udf_check,value_check)
+    correct_artifacts, wrong_value = check_udf_has_value(correct_artifacts, udf_check, value_check)
 
-    apply_calculations(lims,correct_artifacts,'Concentration','*',
-                       'Volume (ul)','Amount (ng)',epp_logger)
+    if correct_artifacts:
+        apply_calculations(lims, correct_artifacts, udf_factor1, '*',
+                           udf_factor2, result_udf, epp_logger)
 
-    abstract = ("Updated {0} artifact(s), skipped {1} artifact(s) with "
-                "wrong or blank 'Conc. Unit'.").format(len(correct_artifacts),
-                                                       len(incorrect_artifacts))
+    d = {'ca': len(correct_artifacts),
+         'ia': len(wrong_factor1)+ len(wrong_factor2) + len(wrong_value)}
+
+    abstract = ("Updated {ca} artifact(s), skipped {ia} artifact(s) with "
+                "wrong and/or blank values for some udfs.").format(**d)
+
     print >> sys.stderr, abstract # stderr will be logged and printed in GUI
 
 
@@ -97,15 +110,13 @@ if __name__ == "__main__":
                         help='Lims id for current Process')
     parser.add_argument('--log',
                         help='Log file for runtime info and errors.')
-    parser.add_argument('--no_prepend',action='store_true',
-                        help="Do not prepend old log file")
     parser.add_argument('--aggregate', action='store_true',
                         help=('Use this tag if current Process is an '
                               'aggregate QC step'))
     args = parser.parse_args()
 
-    lims = Lims(BASEURI,USERNAME,PASSWORD)
+    lims = Lims(BASEURI, USERNAME, PASSWORD)
     lims.check_version()
-    prepend = not args.no_prepend
-    with EppLogger(args.log,lims=lims,prepend=prepend) as epp_logger:
-        main(lims, args,epp_logger)
+
+    with EppLogger(args.log, lims=lims, prepend=True) as epp_logger:
+        main(lims, args, epp_logger)
