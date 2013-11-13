@@ -1,13 +1,13 @@
 #!/usr/bin/env python
-"""EPP script to calculate molar concentration in Clarity LIMS
-Command to trigger this script:
-bash -c "PATH/TO/INSTALLED/SCRIPT
---pid {processLuid} 
---log {compoundOutputFileLuidN}"
-"
+DESC = """EPP script to calculate molar concentration given the 
+weight concentration, in Clarity LIMS. Before updating the artifacts, 
+the script verifies that concentration udf is not blank, and that the
+'Conc. units' field is 'ng/ul' for each artifact. Artifacts that do 
+not fulfill the requirements, will not be updated.
 
-Johannes Alneberg, Science for Life Laboratory, Stockholm, Sweden
+Written by Johannes Alneberg, Science for Life Laboratory, Stockholm, Sweden
 """ 
+
 from argparse import ArgumentParser
 
 from genologics.lims import Lims
@@ -57,8 +57,8 @@ def check_udf(inputs,udf,value):
 
     return filtered_inputs,incorrect_inputs
 
-def main(lims,args,epp_logger):
-    p = Process(lims,id = args.pid)
+def main(lims, args, epp_logger):
+    p = Process(lims, id = args.pid)
     udf_check = 'Conc. Units'
     value_check = 'ng/ul'
     concentration_udf = 'Concentration'
@@ -67,12 +67,12 @@ def main(lims,args,epp_logger):
         artifacts = p.all_inputs(unique=True)
     else:
         all_artifacts = p.all_outputs(unique=True)
-        artifacts = filter(lambda a: a.output_type == "File" ,all_artifacts)
+        artifacts = filter(lambda a: a.output_type == "File", all_artifacts)
 
-    check_udf_is_defined(artifacts,concentration_udf)
-    check_udf_is_defined(artifacts,size_udf)
-    correct_artifacts, incorrect_artifacts = check_udf(artifacts,udf_check,value_check)
-    apply_calculations(lims,correct_artifacts,concentration_udf,size_udf,udf_check,epp_logger)
+    check_udf_is_defined(artifacts, concentration_udf)
+    check_udf_is_defined(artifacts, size_udf)
+    correct_artifacts, incorrect_artifacts = check_udf(artifacts, udf_check, value_check)
+    apply_calculations(lims, correct_artifacts, concentration_udf, size_udf, udf_check, epp_logger)
 
     abstract = ("Updated {0} artifact(s), skipped {1} artifact(s) with "
                 "wrong 'Conc. Unit'.").format(len(correct_artifacts),
@@ -82,22 +82,22 @@ def main(lims,args,epp_logger):
 
 if __name__ == "__main__":
     # Initialize parser with standard arguments and description
-    desc = """EPP script to calculate molar concentration from concentration the
- udf in Clarity LIMS. """
-
-    parser = ArgumentParser(description=desc)
+    parser = ArgumentParser(description=DESC)
     parser.add_argument('--pid',
                         help='Lims id for current Process')
-    parser.add_argument('--log',default=sys.stdout,
-                        help='Log file')
-    parser.add_argument('--no_prepend',action='store_true',
-                        help="Do not prepend old log file")
+    parser.add_argument('--log', default=sys.stdout,
+                        help=('File name for standard log file, '
+                              'for runtime information and problems.')
     parser.add_argument('--aggregate', action='store_true',
-                        help='Current Process is an aggregate QC step')
+                        help=("Use this tag if your process is aggregating "
+                              "results. The default behaviour assumes it is "
+                              "the output artifact of type analyte that is "
+                              "modified while this tag changes this to using "
+                              "input artifacts instead"))
+
     args = parser.parse_args()
 
-    lims = Lims(BASEURI,USERNAME,PASSWORD)
+    lims = Lims(BASEURI, USERNAME, PASSWORD)
     lims.check_version()
-    prepend = not args.no_prepend
-    with EppLogger(args.log,lims=lims,prepend=prepend) as epp_logger:
-        main(lims, args,epp_logger)
+    with EppLogger(args.log, lims=lims, prepend=True) as epp_logger:
+        main(lims, args, epp_logger)
