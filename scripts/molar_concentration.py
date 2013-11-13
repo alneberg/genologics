@@ -86,7 +86,7 @@ def main(lims, args, epp_logger):
          'ia': len(wrong_value) + len(no_size) + len(no_concentration)}
 
     abstract = ("Updated {ca} artifact(s), skipped {ia} artifact(s) with "
-                "wrong 'Conc. Unit'.").format(**d)
+                "wrong and/or blank values for some udfs.").format(**d)
 
     print >> sys.stderr, abstract # stderr will be logged and printed in GUI
 
