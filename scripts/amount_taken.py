@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-DESC = """EPP script to subtract the value of "Amount taken (ng)" udf from "Amount (ng)"
- udf in Clarity LIMS. Can be executed in the background, without user pressing a "blue button".
-
-What happens if the process step is aborted? Is the amount taken put back into the amount?
-What safety checks should we have for the amount taken value... Less than what's in the amount udf?
+DESC = """EPP script to add the value of "Amount taken (ng)" udf on analyte level
+ to "Amount taken (ng)" udf on sample level in Clarity LIMS. Can be executed in 
+the background, without user pressing a "blue button". Strictly checks that 
+"Amount taken (ng)" udf is defined for all artifacts and all samples, and
+that the value for the artifact is entered correct before updating anything.
 
 Written by Johannes Alneberg, Science for Life Laboratory, Stockholm, Sweden
 """ 
@@ -11,7 +11,7 @@ Written by Johannes Alneberg, Science for Life Laboratory, Stockholm, Sweden
 from argparse import ArgumentParser
 
 from genologics.lims import Lims
-from genologics.config import BASEURI,USERNAME,PASSWORD
+from genologics.config import BASEURI, USERNAME, PASSWORD
 
 from genologics.entities import Process
 from genologics.epp import EppLogger
@@ -19,19 +19,24 @@ from genologics.epp import EppLogger
 import logging
 import sys
 
-def apply_calculations(lims,artifacts,amount_udf,taken_udf,epp_logger):
+def apply_calculations(lims, artifacts, artifact_udf, sample_udf, epp_logger):
     for artifact in artifacts:
-        logging.info(("Updating: Artifact id: {0}, "
-                     "Amount: {1}, Amount taken (ng): {2}, ").format(artifact.id, 
-                                                        artifact.udf[amount_udf],
-                                                        artifact.udf[taken_udf]))
-        artifact.udf[amount_udf] += - artifact.udf[taken_udf]
-        artifact.put()
-        logging.info('Updated {0} to {1}.'.format(amount_udf,
-                                                 artifact.udf[amount_udf]))
+        for sample in artifact.samples:
+            if not sample_udf in sample.udf:
+                sample.udf[sample_udf] = 0
 
-def check_udf_is_defined(artifacts,udf):
-    """ Exit if udf is not defined for any of inputs. """
+            logging.info(("Updating: sample id: {0}, "
+                          "Adding {1} to {2}").format(sample.id, 
+                                                      artifact.udf[artifact_udf],
+                                                      sample.udf[sample_udf]))
+
+            sample.udf[sample_udf] += artifact.udf[artifact_udf]
+            sample.put()
+            logging.info('Updated {0} to {1}.'.format(sample_udf,
+                                                      sample.udf[sample_udf]))
+
+def check_udf_is_defined(artifacts, udf):
+    """ Filter and Warn if udf is not defined for any of artifacts. """
     filtered_artifacts = []
     incorrect_artifacts = []
     for artifact in artifacts:
@@ -39,14 +44,29 @@ def check_udf_is_defined(artifacts,udf):
             filtered_artifacts.append(artifact)
         else:
             logging.warning(("Found artifact for sample {0} with {1} "
-                             "undefined/blank.").format(artifact.samples[0].name,udf))
+                             "undefined/blank, skipping").format(artifact.samples[0].name, udf))
             incorrect_artifacts.append(artifact)
     return filtered_artifacts, incorrect_artifacts
 
-def main(lims,args,epp_logger):
-    p = Process(lims,id = args.pid)
-    amount_udf = 'Amount (ng)'
-    taken_udf = 'Amount taken (ng)'
+def check_below_threshold(artifacts, value_udf, threshold):
+    """ Filter and warn if value_udf is above threshold for any of artifacts. """
+    filtered_artifacts = []
+    incorrect_artifacts = []
+    for artifact in artifacts:
+        if artifact.udf[value_udf] <= threshold:
+            filtered_artifacts.append(artifact)
+        else:
+            logging.warning(("Found artifact for sample {0} where {1} "
+                             "is above threshold").format(artifact.samples[0].name, value_udf))
+            incorrect_artifacts.append(artifact)
+    return filtered_artifacts, incorrect_artifacts
+    
+
+def main(lims, args, epp_logger):
+    p = Process(lims, id = args.pid)
+    artifact_udf = 'Amount taken (ng)'
+    sample_udf = 'Total amount taken (ng)'
+    threshold = args.threshold
 
     if args.aggregate:
         artifacts = p.all_inputs(unique=True)
@@ -54,16 +74,27 @@ def main(lims,args,epp_logger):
         all_artifacts = p.all_outputs(unique=True)
         artifacts = filter(lambda a: a.output_type == "Analyte", all_artifacts)
 
-    correct_amount_a, incorrect_amount_a = check_udf_is_defined(artifacts, amount_udf)
-    correct_artifacts, incorrect_taken_a = check_udf_is_defined(correct_amount_a, taken_udf)
+    correct_artifacts, undefined_amount_a = check_udf_is_defined(artifacts, artifact_udf)
+    
+    # strict checking of udf values
+    if len(undefined_amount_a):
+        # stderr will be logged and printed in GUI
+        print >> sys.stderr, "Exiting due to {0} artifacts with blank {1}".format(len(undefined_amount_a), 
+                                                                                  artifact_udf)
+        sys.exit(-1)
 
-    # Merge lists of mutually exclusive incorrect artifcats
-    incorrect_artifacts = incorrect_amount_a + incorrect_taken_a
+    if threshold:
+        correct_artifacts, above_threshold = check_below_threshold(artifacts, artifact_udf, threshold)
+        if len(above_threshold):
+            print >> sys.stderr, ("Exiting due to {0} artifacts where {1}"
+                                  "is above threshold {2}").format(len(above_threshold),
+                                                                   artifact_udf,
+                                                                   threshold)
+            sys.exit(-1)
 
-    apply_calculations(lims,correct_artifacts, amount_udf, taken_udf, epp_logger)
+    apply_calculations(lims, correct_artifacts, artifact_udf, sample_udf, epp_logger)
 
-    abstract = ("Updated {0} artifact(s), skipped {1} artifact(s) with incorrect udf info.").format(len(correct_artifacts),
-                                             len(incorrect_artifacts))
+    abstract = ("Updated all samples' {0}.").format(sample_udf)
     print >> sys.stderr, abstract # stderr will be logged and printed in GUI
 
 
@@ -73,15 +104,22 @@ if __name__ == "__main__":
     parser = ArgumentParser(description=DESC)
     parser.add_argument('--pid',
                         help='Lims id for current Process')
-    parser.add_argument('--log',default=sys.stdout,
-                        help='Log file')
+    parser.add_argument('--log', default=sys.stdout,
+                        help='Log file for runtime info and errors.')
+    parser.add_argument('--threshold', type=int, default=None,
+                        help=("Upper threshold for the amount taken (ng) value "
+                              "that is accepted. If any artifact has a HIGHER "
+                              "value, the script will not update any samples."))
     parser.add_argument('--aggregate', action='store_true',
-                        help=('This flag is needed if the current process '
-                              'is an aggregate QC step'))
+                        help=("Use this tag if your process is aggregating "
+                              "results. The default behaviour assumes it is "
+                              "the output artifact of type analyte that is "
+                              "modified while this tag changes this to using "
+                              "input artifacts instead."))
     args = parser.parse_args()
 
-    lims = Lims(BASEURI,USERNAME,PASSWORD)
+    lims = Lims(BASEURI, USERNAME, PASSWORD)
     lims.check_version()
 
-    with EppLogger(args.log,lims=lims, prepend=True) as epp_logger:
+    with EppLogger(args.log, lims=lims, prepend=True) as epp_logger:
         main(lims, args, epp_logger)
