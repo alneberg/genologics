@@ -25,7 +25,7 @@ def apply_calculations(lims, artifacts, conc_udf, size_udf, unit_udf, epp_logger
                      "Concentration: {1}, Size: {2}, ").format(artifact.id, 
                                                         artifact.udf[conc_udf],
                                                         artifact.udf[size_udf]))
-        factor = 1e6 / (328.32 * artifact.udf[size_udf])
+        factor = 1e6 / (328.3 * 2 * artifact.udf[size_udf])
         artifact.udf[conc_udf] = artifact.udf[conc_udf] * factor
         artifact.udf[unit_udf] = 'nM'
         artifact.put()
