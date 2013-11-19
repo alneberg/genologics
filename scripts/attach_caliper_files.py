@@ -64,7 +64,7 @@ def main(lims, args, epp_logger):
         im_file_r = re.compile(re_str)
         fns = filter(im_file_r.match, file_list)
         logging.info(("Looking for file for artifact id: {input_artifact_id} "
-                     "in container with id: {container_id}, ").format(**info))
+                      "from container with id: {container_id}, ").format(**info))
 
         if len(fns) == 0:
             logging.warning("No image file found for artifact with id {0}".format(i_a.id))
@@ -72,7 +72,7 @@ def main(lims, args, epp_logger):
         elif len(fns) > 1:
             logging.warning(("Multiple image files found for artifact with id {0}, "
                             "please attach files manually".format(i_a.id)))
-            artifact_multiple_files.append(i_a)
+            artifact_multiple_file.append(i_a)
         else:
             fn = fns[0]
             found_files.append(fn)
@@ -88,12 +88,12 @@ def main(lims, args, epp_logger):
         warning = "Did not find any file for {0} artifact(s). ".format(len(artifact_missing_file))
 
     if len(artifact_multiple_file):
-        warning += "Found multiple files for {0} artifact(s).".format(len(artifact_multiple_file))
+        warning += "Found multiple files for {0} artifact(s), none of these were uploaded.".format(len(artifact_multiple_file))
     
     if warning:
        warning = "Warning: " + warning
 
-    abstract = "Found {0} file(s). {1}".format(len(found_files), warning)
+    abstract = "Uploaded {0} file(s). {1}".format(len(found_files), warning)
     print >> sys.stderr, abstract # stderr will be logged and printed in GUI
 
 
