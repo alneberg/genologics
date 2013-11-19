@@ -3,6 +3,55 @@ Scripts in the Genologics Package
 =================================
 Short usage descriptions for the scripts in the Genologics Package.
 
+amount_taken.py
+---------------
+Automated help message generated from running amount_taken.py with the --help flag::
+
+	usage: amount_taken.py [-h] [--pid PID] [--log LOG] [--threshold THRESHOLD]
+	                       [--aggregate]
+	
+	EPP script to add the value of "Amount taken (ng)" udf on analyte level to
+	"Amount taken (ng)" udf on sample level in Clarity LIMS. Can be executed in
+	the background, without user pressing a "blue button". Strictly checks that
+	"Amount taken (ng)" udf is defined for all artifacts and all samples, and that
+	the value for the artifact is entered correct before updating anything.
+	Written by Johannes Alneberg, Science for Life Laboratory, Stockholm, Sweden
+	
+	optional arguments:
+	  -h, --help            show this help message and exit
+	  --pid PID             Lims id for current Process
+	  --log LOG             Log file for runtime info and errors.
+	  --threshold THRESHOLD
+	                        Upper threshold for the amount taken (ng) value that
+	                        is accepted. If any artifact has a HIGHER value, the
+	                        script will not update any samples.
+	  --aggregate           Use this tag if your process is aggregating results.
+	                        The default behaviour assumes it is the output
+	                        artifact of type analyte that is modified while this
+	                        tag changes this to using input artifacts instead.
+
+attach_caliper_files.py
+-----------------------
+Automated help message generated from running attach_caliper_files.py with the --help flag::
+
+	usage: attach_caliper_files.py [-h] [--pid PID] [--log LOG] [--path PATH]
+	
+	EPP script to fetch and upload Caliper image files for Clarity LIMS. Searches
+	the directory given by the path argument for filenames matching a specific
+	pattern ending with: ${INPUT.CONTAINER.PLACEMENT}_${INPUT.NAME}_${INPUT.CONTAI
+	NER.LIMSID}_${INPUT.LIMSID}. This is done for each artifact of type
+	ResultFile, that is of type PerInput. Any file found matching is copied to the
+	current working directory with a name suffixed with the output artifact it is
+	connected to. When executed as an EPP, this will cause the Clarity LIMS EPP
+	wrapper to associate the file with this artifact. Written by Johannes
+	Alneberg, Science for Life Laboratory, Stockholm, Sweden.
+	
+	optional arguments:
+	  -h, --help   show this help message and exit
+	  --pid PID    Lims id for current Process
+	  --log LOG    Log file for runtime info and errors
+	  --path PATH  Path where image files are located
+
 copy_reference_genome.py
 ------------------------
 Automated help message generated from running copy_reference_genome.py with the --help flag::
