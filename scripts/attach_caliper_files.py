@@ -63,14 +63,14 @@ def main(lims, args, epp_logger):
 
         im_file_r = re.compile(re_str)
         fns = filter(im_file_r.match, file_list)
-        logging.info(("Looking for file for artifact id: {input_artifact_id}"
+        logging.info(("Looking for file for artifact id: {input_artifact_id} "
                      "in container with id: {container_id}, ").format(**info))
 
         if len(fns) == 0:
             logging.warning("No image file found for artifact with id {0}".format(i_a.id))
             artifact_missing_file.append(i_a)
         elif len(fns) > 1:
-            logging.warning(("Multiple image files found for artifact with id {0, "
+            logging.warning(("Multiple image files found for artifact with id {0}, "
                             "please attach files manually".format(i_a.id)))
             artifact_multiple_files.append(i_a)
         else:
