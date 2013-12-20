@@ -92,10 +92,10 @@ class Session(object):
             sample = self._sample(artifact)
             try:
                 sample.udf[self.d_udf] = artifact.udf[self.s_udf]
-            except TypeError as e:
+                sample.put()
+            except (TypeError, HTTPError) as e:
                 print >> sys.stderr, "Error while updating artifact: {0}".format(e)
                 sys.exit(-1)
-            sample.put()
             self.log_after_change(artifact, saved_sample_udf)
             
             self.used_artifacts.append(artifact)
