@@ -124,25 +124,29 @@ def check_udf_is_defined(artifacts,udf):
     return filtered_artifacts, incorrect_artifacts
 
 def prepend_status_changelog(args, lims):
-    """ Prepends old file entries if such exists """
+    """ Prepends old file entries if such exists, precedence is given 
+    to file existing on disk, enabling nested scripts."""
     # Check if a changelog for this process exists: 
-    try:
-        changelog_artifact = Artifact(lims, id=args.status_changelog)
-        changelog_artifact.get()
-        if changelog_artifact.files:
-            changelog_path = changelog_artifact.files[0].content_location.split(
-                lims.baseuri.split(':')[1])[1]
-            dir = os.getcwd()
-            destination = os.path.join(dir, args.status_changelog)
-            copy(changelog_path,destination)
-    except HTTPError: # Probably no artifact found, skip prepending
-        logging.warning(('No changelog file artifact found '
-                         'for id: {0}').format(args.status_changelog))
-    except IOError as e: # Probably some path was wrong in copy
-        logging.error(('Changelog could not be prepended, '
-                       'make sure {0} is a'
-                       'proper path.').format(changelog_path))
-        sys.exit(-1)
+
+    dir = os.getcwd()
+    destination = os.path.join(dir, args.status_changelog)
+    if not os.path.isfile(destination):
+        try:
+            changelog_artifact = Artifact(lims, id=args.status_changelog)
+            changelog_artifact.get()
+
+            if changelog_artifact.files:
+                changelog_path = changelog_artifact.files[0].content_location.split(
+                    lims.baseuri.split(':')[1])[1]
+                copy(changelog_path,destination)
+        except HTTPError: # Probably no artifact found, skip prepending
+            logging.warning(('No changelog file artifact found '
+                             'for id: {0}').format(args.status_changelog))
+        except IOError as e: # Probably some path was wrong in copy
+            logging.error(('Changelog could not be prepended, '
+                           'make sure {0} is a'
+                           'proper path.').format(changelog_path))
+            sys.exit(-1)
 
 def main(lims, args, epp_logger):
     p = Process(lims,id = args.pid)
