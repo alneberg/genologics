@@ -139,33 +139,48 @@ class EppLogger(object):
 
     def prepend_old_log(self):
         """Prepend the old log to the new log. 
+        
+        If the old log file exists in the current directory, it is appended
+        to directly without looking for a file in the api. This enables
+        EPP scripts to be nested in the bash command and still using the
+        same log file.
 
-        The location of the old log file is retrieved through the REST api. 
-        In order to work, the script should be executed on the LIMS server
-        since the location on the disk is parsed out from the sftp string
-        and then used for local copy of file. 
+        If the file is not found on disk, the location of the old log file 
+        is retrieved through the REST api. In order to work, the script 
+        should be executed on the LIMS server since the location on the 
+        disk is parsed out from the sftp string and then used for 
+        local copy of file. 
 
         This method does not use logging since that could mess up the
         logging settings, instead warnings are printed to stderr."""
-        try:
-            log_artifact = Artifact(self.lims,id=self.log_file)
-            log_artifact.get()
-            if log_artifact.files:
-                log_path = log_artifact.files[0].content_location.split(
-                    self.lims.baseuri.split(':')[1])[1]
-                dir = os.getcwd()
-                destination = os.path.join(dir,self.log_file)
-                copy(log_path,destination)
-                with open(destination,'a') as f:
-                    f.write('='*80+'\n')
-        except HTTPError: # Probably no artifact found, skip prepending
-            print >> sys.stderr, ('No log file artifact found '
-                                  'for id: {0}').format(self.log_file)
-        except IOError as e: # Probably some path was wrong in copy
-            print >> sys.stderr, ('Log could not be prepended, '
-                                  'make sure {0} and {1} are '
-                                  'proper paths.').format(log_path,self.log_file)
-            raise e
+
+        dir = os.getcwd()
+        destination = os.path.join(dir,self.log_file)
+        if not os.path.isfile(destination):
+            try:
+                log_artifact = Artifact(self.lims,id=self.log_file)
+                log_artifact.get()
+
+                if log_artifact.files:
+                    # Parse out the file path
+                    log_path = log_artifact.files[0].content_location.split(
+                        self.lims.baseuri.split(':')[1])[1]
+                    copy(log_path, destination)
+
+            except HTTPError: # Probably no artifact found, skip prepending
+                print >> sys.stderr, ('No log file artifact found '
+                                      'for id: {0}').format(self.log_file)
+            except IOError as e: # Probably some path was wrong in copy
+                print >> sys.stderr, ('Log could not be prepended, '
+                                      'make sure {0} and {1} are '
+                                      'proper paths.').format(log_path, self.log_file)
+                raise e
+
+        # Separate old log from new
+        if os.path.isfile(destination):
+            with open(destination,'a') as f:
+                f.write('='*80+'\n')
+        
 
     class StreamToLogger(object):
         """Fake file-like stream object that redirects writes to a logger instance.
