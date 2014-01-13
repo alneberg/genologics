@@ -93,6 +93,8 @@ class Session(object):
             try:
                 sample.udf[self.d_udf] = artifact.udf[self.s_udf]
                 sample.put()
+                print >> sys.stderr, "FAKE ERROR"
+                sys.exit(-1)
             except (TypeError, HTTPError) as e:
                 print >> sys.stderr, "Error while updating artifact: {0}".format(e)
                 sys.exit(-1)
@@ -166,6 +168,7 @@ def main(lims, args, epp_logger):
 
     correct_artifacts, incorrect_udf = check_udf_is_defined(artifacts, source_update_udf)
 
+    import ipdb; ipdb.set_trace()
     if args.status_changelog:
         prepend_status_changelog(args,lims)
 
@@ -221,5 +224,5 @@ if __name__ == "__main__":
     lims = Lims(BASEURI,USERNAME,PASSWORD)
     lims.check_version()
 
-    with EppLogger(args.log, lims=lims, prepend=True) as epp_logger:
-        main(lims, args, epp_logger)
+    main(lims,args, None)
+
