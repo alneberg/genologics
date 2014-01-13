@@ -168,7 +168,6 @@ def main(lims, args, epp_logger):
 
     correct_artifacts, incorrect_udf = check_udf_is_defined(artifacts, source_update_udf)
 
-    import ipdb; ipdb.set_trace()
     if args.status_changelog:
         prepend_status_changelog(args,lims)
 
