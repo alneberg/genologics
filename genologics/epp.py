@@ -100,9 +100,13 @@ class EppLogger(object):
         self.log_file = log_file
         self.level = level
         self.prepend = prepend
-
-        if prepend and self.log_file:
-            self.prepend_old_log()
+        
+        cwd = os.getcwd()
+        destination = os.path.join(cwd, log_file)
+        # log file on disk has precedence over api-fetched log file
+        if not os.path.isfile(destination):
+            if prepend and self.log_file:
+                self.prepend_old_log()
 
         # Loggers that will capture stdout and stderr respectively
         stdout_logger = logging.getLogger('STDOUT')
