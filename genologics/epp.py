@@ -165,8 +165,8 @@ class EppLogger(object):
                 log_artifact.get()
                 if log_artifact.files:
                     # Parse out location of file from sftp path given by api
-                    has_port = re.compile(':[0-9]{3,4}$')
-                    if has_port.match(self.lims.baseuri):
+                    has_port = re.compile(":[0-9]{1,5}/*$")
+                    if has_port.search(self.lims.baseuri):
                         baseuri = self.lims.baseuri.split(':')[1]
                     else:
                         baseuri = self.lims.baseuri
