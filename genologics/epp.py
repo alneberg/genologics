@@ -9,6 +9,7 @@ Copyright (C) 2013 Johannes Alneberg
 import logging
 import sys
 import os
+import re
 import pkg_resources
 from pkg_resources import DistributionNotFound
 from shutil import copy
