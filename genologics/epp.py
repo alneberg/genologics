@@ -163,8 +163,13 @@ class EppLogger(object):
                 log_artifact = Artifact(self.lims,id = log_file_name)
                 log_artifact.get()
                 if log_artifact.files:
-                    log_path = log_artifact.files[0].content_location.split(
-                        self.lims.baseuri.split(':')[1])[1]
+                    # Parse out location of file from sftp path given by api
+                    has_port = re.compile(':[0-9]{3,4}$')
+                    if has_port.match(self.lims.baseuri):
+                        baseuri = self.lims.baseuri.split(':')[1]
+                    else:
+                        baseuri = self.lims.baseuri
+                    log_path = log_artifact.files[0].content_location.split(baseuri)[1]
                     copy(log_path, local_log_path)
                     with open(local_log_path,'a') as f:
                         f.write('='*80+'\n')
