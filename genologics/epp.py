@@ -1,3 +1,4 @@
+from __future__ import print_function
 """Contains useful and reusable code for EPP scripts.
 
 Classes, methods and exceptions.
@@ -47,7 +48,12 @@ def unique_check(l,msg):
     elif len(l)!=1:
         raise NotUniqueError("Multiple items found for {0}".format(msg))
 
-    
+def set_field(element):
+    try:
+        element.put()
+    except (TypeError, HTTPError) as e:
+        logging.warning("Error while updating element: {0}".format(e))
+
 class EppLogger(object):
 
     """Context manager for logging module useful for EPP script execution.
@@ -55,13 +61,13 @@ class EppLogger(object):
     This context manager (CM) automatically logs what script that is executed,
     with what parameters it was executed and what version (including) commit
     hash of the genologics package used. Since EPP scripts are often ran
-    automatically by the genologics LIMS client, the stdout and stderr is 
+    automatically by the genologics LIMS client, the stdout and stderr is
     captured and logged within this CM. Stderr is duplicated so that the
     last line can be shown in the GUI. In order to track multiple runs
-    of the same process from the genologics LIMS GUI, the previous log 
+    of the same process from the genologics LIMS GUI, the previous log
     files can be prepended. Also a main log file can be used that is
     supposed to be common for all scripts executed on the server.
-    
+
     """
 
     PACKAGE = 'genologics'
@@ -69,7 +75,7 @@ class EppLogger(object):
         logging.info('Executing file: {0}'.format(sys.argv[0]))
         logging.info('with parameters: {0}'.format(sys.argv[1:]))
         try:
-            logging.info('Version of {0}: '.format(self.PACKAGE) + 
+            logging.info('Version of {0}: '.format(self.PACKAGE) +
                          pkg_resources.require(self.PACKAGE)[0].version)
         except DistributionNotFound as e:
             logging.error(e)
@@ -92,7 +98,7 @@ class EppLogger(object):
 
         Arguments:
         log_file  -- file to write individual log to
-        
+
         Keyword Arguments:
         level   -- Logging level, default logging.INFO
         lims    -- Lims instance, needed for prepend to work
@@ -102,7 +108,7 @@ class EppLogger(object):
         self.log_file = log_file
         self.level = level
         self.prepend = prepend
-        
+
         cwd = os.getcwd()
         destination = os.path.join(cwd, log_file)
         # log file on disk has precedence over api-fetched log file
@@ -144,12 +150,12 @@ class EppLogger(object):
             self.logger.warning('No main log file found.')
 
     def prepend_old_log(self, external_log_file = None):
-        """Prepend the old log to the new log. 
+        """Prepend the old log to the new log.
 
-        The location of the old log file is retrieved through the REST api. 
+        The location of the old log file is retrieved through the REST api.
         In order to work, the script should be executed on the LIMS server
         since the location on the disk is parsed out from the sftp string
-        and then used for local copy of file. 
+        and then used for local copy of file.
 
         This method does not use logging since that could mess up the
         logging settings, instead warnings are printed to stderr."""
@@ -164,29 +170,26 @@ class EppLogger(object):
                 log_artifact = Artifact(self.lims,id = log_file_name)
                 log_artifact.get()
                 if log_artifact.files:
-                    # Parse out location of file from sftp path given by api
-                    has_port = re.compile(":[0-9]{1,5}/*$")
-                    if has_port.search(self.lims.baseuri):
-                        baseuri = self.lims.baseuri.split(':')[1]
-                    else:
-                        baseuri = self.lims.baseuri
-                    log_path = log_artifact.files[0].content_location.split(baseuri)[1]
+                    log_path = log_artifact.files[0].content_location.split(
+                        self.lims.baseuri.split(':')[1])[1]
                     copy(log_path, local_log_path)
                     with open(local_log_path,'a') as f:
                         f.write('='*80+'\n')
             except HTTPError: # Probably no artifact found, skip prepending
-                print >> sys.stderr, ('No log file artifact found '
-                                      'for id: {0}').format(log_file_name)
+                print(('No log file artifact found '
+                                      'for id: {0}').format(log_file_name), file=sys.stderr)
             except IOError as e: # Probably some path was wrong in copy
-                print >> sys.stderr, ('Log could not be prepended, '
+                print(('Log could not be prepended, '
                                       'make sure {0} and {1} are '
-                                      'proper paths.').format(log_path, log_file_name)
+                                      'proper paths.').format(log_path,
+                                                              log_file_name), file=sys.stderr)
                 raise e
 
     class StreamToLogger(object):
-        """Fake file-like stream object that redirects writes to a logger instance.
-        
-        source: 
+        """Fake file-like stream object that redirects writes to a logger
+        instance.
+
+        source:
         http://www.electricmonk.nl/log/2011/08/14/
         redirect-stdout-and-stderr-to-a-logger-in-python/
         """
@@ -202,20 +205,121 @@ class EppLogger(object):
             for line in buf.rstrip().splitlines():
                 self.logger.log(self.log_level, line.rstrip())
 
+class ReadResultFiles():
+    """Class to read pars different kinds of result files from a process.
+    The class stores the parsed content of all shared result files in a
+    dictionary 'shared_files'. The data is parsed as lists of lists. """
+
+    def __init__(self, process):
+        self.process = process
+        self.shared_files = self._pars_file('SharedResultFile')
+        self.perinput_files = self._pars_file('ResultFile')
+
+    def get_file_path(self, artifact):
+        if len(artifact.files) > 0:
+            file = artifact.files[0]
+            file_path = file.content_location.split('scilifelab.se')[1]
+            if len(file_path.split('.')) > 1:
+                return file_path
+        return None
+
+    def _pars_file(self, output_type):
+        """Reads a csv or txt into a list of lists, where sub lists are lines
+        of the csv."""
+        outs = self.process.all_outputs()
+        outarts = [a for a in outs if a.output_type == output_type]
+        parsed_files = {}
+        for outart in outarts:
+            file_path = self.get_file_path(outart)
+            if file_path:
+                of = open(file_path ,'r')
+                file_ext = file_path.split('.')[-1]
+                if file_ext == 'csv':
+                    pf = [row for row in csv.reader(of.read().splitlines())]
+                    parsed_files[outart.name] = pf
+                elif file_ext == 'txt':
+                    pf = [row.strip().strip('\\').split('\t') for row in of.readlines()]
+                    parsed_files[outart.name] = pf
+                of.close()
+        return parsed_files
+
+    def format_file(self, parsed_file, name = '', first_header = None,
+                    header_row = None, root_key_col = 0, find_keys = []):
+        """Function to format a parsed csv or txt file.
+
+        Arguments and Output:
+            parsed_file     A list of lists where sublists are rows of the csv.
+            name            Name of parsed file.
+            first_header    First column of the heather section in the file.
+                            default value is 'None'
+            root_key_col    If you want the root keys to be given by some other
+                            column than the first one, set root_key_col to the
+                            column number.
+            header_row      Instead of specifying first_header you can choose
+                            from what line to reed by setting header_row to the
+                            row number where you want to start reading.
+            find_keys       List of row names to look for. Will exclude all
+                            others.
+            file_info       Dict of dicts. Keys of root dict are the first
+                            column in the csv starting from the line after the
+                            heather line. Keys of sub dicts are the columns of
+                            the heather line."""
+        file_info = {}
+        keys = []
+        error_message = ''
+        duplicated_lines = []
+        exeptions = ['Sample','Fail', '']
+        if type(first_header) is not list:
+            if first_header:
+                first_header=[first_header]
+            else:
+                first_header=[]
+        for row, line in enumerate(parsed_file):
+            if keys and len(line)==len(keys):
+                root_key = line[root_key_col]
+                cond1 = find_keys == [] and root_key not in exeptions
+                cond2 = root_key in find_keys
+                if root_key in file_info:
+                    duplicated_lines.append(root_key)
+                elif (cond1 or cond2):
+                    file_info[root_key] = {}
+                    if not duplicated_lines:
+                        for col in range(len(keys)):
+                            if keys[col] != '':
+                                file_info[root_key][keys[col]] = line[col]
+                            elif keys[col-1] != '':
+                                tupl = (file_info[root_key][keys[col-1]], line[col])
+                                file_info[root_key][keys[col-1]] = tupl
+
+            head = line[root_key_col] if len(line) > root_key_col else None
+            if first_header and head in first_header:
+                keys = line
+            elif header_row and row == header_row:
+                keys = line
+        if duplicated_lines:
+            error_message = ("Row names {0} occurs more than once in file {1}. "
+                "Fix the file to continue. ").format(','.join(duplicated_lines), name)
+        if not file_info:
+            error_message = error_message + "Could not format parsed file {0}.".format(name)
+        if error_message:
+            print(error_message, file=sys.stderr)
+            sys.exit(-1)
+        return file_info
+
 
 class CopyField(object):
-    """Class to copy any filed (or udf) from any lims element to any 
+    """Class to copy any filed (or udf) from any lims element to any
     udf on any other lims element
 
-    argumnets:
+    arguments:
 
-    s_elt           source elemement - instance of a type
+    s_elt           source element - instance of a type
     d_elt           destination element - instance of a type
-    s_field_name    name of source field (or udf) to be copied 
-    d_udf_name      name of destination udf name. If not specifyed
+    s_field_name    name of source field (or udf) to be copied
+    d_udf_name      name of destination udf name. If not specified
                     s_field_name will be used.
 
-    The copy_udf() function takes a logfile as optional argument.
+    The copy_udf() function takes a log file as optional argument.
     If this is given the changes will be logged there.
 
     Written by Maya Brandi and Johannes Alnberg
@@ -249,7 +353,7 @@ class CopyField(object):
             elt.put()
             return True
         except (TypeError, HTTPError) as e:
-            print >> sys.stderr, "Error while updating element: {0}".format(e)
+            print("Error while updating element: {0}".format(e), file=sys.stderr)
             sys.exit(-1)
             return False
 
@@ -263,8 +367,8 @@ class CopyField(object):
                  'nv' : self.s_field,
                  'd_elt_type': self.d_type}
 
-            changelog_f.write(("{ct}: udf: '{s_udf}' on {d_elt_type}: '{sn}' (id: {si}) is changed from "
-                               "'{su}' to '{nv}'.\n").format(**d))
+            changelog_f.write(("{ct}: udf: '{s_udf}' on {d_elt_type}: '{sn}' ("
+                "id: {si}) is changed from '{su}' to '{nv}'.\n").format(**d))
 
         logging.info(("Copying from element with id: {0} to element with "
                       " id: {1}").format(self.s_elt.id, self.d_elt.id))
@@ -276,7 +380,8 @@ class CopyField(object):
              'nv': self.s_field,
              'd_elt_type': self.d_type}
 
-        logging.info("Updated {d_elt_type} udf: {d_udf}, from {su} to {nv}.".format(**d))
+        logging.info("Updated {d_elt_type} udf: {d_udf}, from {su} to "
+                                                            "{nv}.".format(**d))
 
     def copy_udf(self, changelog_f = None):
         if self.s_field != self.old_dest_udf:
@@ -286,6 +391,3 @@ class CopyField(object):
             return log
         else:
             return False
-
-
-

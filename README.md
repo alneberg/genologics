@@ -1,8 +1,17 @@
 ## Python interface to the GenoLogics LIMS server via its REST API.
 
-A basic module for interacting with the GenoLogics LIMS server via
+[![PyPI version](https://badge.fury.io/py/genologics.svg)](http://badge.fury.io/py/genologics)
+
+A basic module for interacting with the Illumina Basespace Clarity LIMS server via
 its REST API. The goal is to provide simple access to the most common
 entities and their attributes in a reasonably Pythonic fashion.
+
+Supported python versions :
+
+2.6   
+2.7 (recommended)  
+3.4  
+3.5  
 
 ### Design
 
@@ -63,6 +72,15 @@ Usage example scripts are provided in the subdirectory 'examples'.
 NOTE: The example files rely on specific entities and configurations
 on the server, and use base URI, user name and password, so to work
 for your server, all these must be reviewed and modified.
+
+
+### EPPs
+
+The EPPs in use at Scilifelab can be found in the subdirectory 'scripts' of the repository [scilifelab_epps](https://github.com/SciLifeLab/scilifelab_epps/).
+
+### Pull requests policy
+
+Pull requests are welcome, and will be tested internally before merging. Be aware that this process might take a fair amount of time. 
 
 ### Known bugs 
 
